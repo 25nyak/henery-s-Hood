@@ -1,0 +1,964 @@
+/* Template contract — keep this sizing block intact when re-theming.
+   The game runs in an iframe inside iOS/Android WebViews, where viewport
+   units (100vh/100dvh/100vw) go stale after the view scrolls or hides and
+   leave blank bands; this container-percentage chain is what sizes the game
+   reliably. Restyle colors, fonts, and visuals freely, but do not replace
+   these sizing/overflow rules or size any root container in viewport units. */
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: #101820;
+  color: #f8fbff;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+body {
+  position: fixed;
+  inset: 0;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  /* Size container: children size type/spacing in cqw/cqh/cqmin units,
+     which track the actual game frame (viewport units are banned above). */
+  container-type: size;
+}
+
+canvas,
+.game-surface {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+button,
+[role="button"] {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Template contract — fit-mechanics primitives. Layout is top-down: the
+   frame is the budget and content adapts to its box, so overflow is
+   impossible by construction. These classes carry ONLY fit mechanics —
+   shrink/wrap behavior, min-width: 0 (flex children otherwise refuse to
+   shrink below their text), truncation, container-query type scaling, 44px
+   touch minimums, and gaps. They are deliberately unstyled: their look
+   (colors, backgrounds, radii, borders, fonts) is yours to build from the
+   game's art direction. Custom controls and layouts are welcome too — keep
+   the same fit rules. Do not remove the sizing/min/max/overflow/gap rules. */
+
+/* Horizontal band of HUD stats. Wraps rather than shrinking: portrait
+   frames are width-poor but height-rich, so an overcrowded row spends a
+   second line at full legibility instead of truncating. Grid-track
+   friendly: use as the `auto` rows of a
+   `grid-template-rows: auto minmax(0, 1fr) auto` page layout. */
+.hud-row {
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-width: 0;
+  gap: clamp(6px, 2cqw, 14px);
+  padding: clamp(6px, 2cqmin, 12px);
+}
+
+/* Compact HUD stat (score, timer, lives). Truncates rather than breaking
+   layout as a last resort; add `flex-shrink: 0` to a badge that must never
+   truncate (score, timer) so decorative neighbors compress first. */
+.badge {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: clamp(12px, 3.5cqw, 18px);
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Discrete status pips (hearts, lives, stars, ammo). Pips are fixed-size
+   flex items, NEVER repeated glyphs inside a truncating text run: glyphs
+   like ♥ resolve through different fallback fonts per browser, take
+   different widths, and get clipped by ellipsis in Firefox/Safari but not
+   Chrome. The fixed box is what makes a pip safe — its content can be
+   whatever fits the game: a glyph centered in the box (the box neutralizes
+   glyph-width differences), a generated sprite via `background: url(...)
+   center/contain no-repeat`, or an SVG/mask shape. */
+.pip-row {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(2px, 0.8cqw, 6px);
+}
+
+.pip {
+  flex: 0 0 auto;
+  width: clamp(12px, 4cqw, 20px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+/* Touch-control band. */
+.controls-row {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  gap: clamp(12px, 3cqw, 20px);
+  padding: clamp(8px, 2cqmin, 14px);
+}
+
+/* Finger-sized control. 44px is the minimum touch target; the gap above is
+   the minimum separation. flex: 0 1 auto lets a crowded row shrink buttons
+   down to (but never below) the minimum instead of overflowing the frame. */
+.control-btn {
+  box-sizing: border-box;
+  flex: 0 1 auto;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5em 1em;
+  font-size: clamp(13px, 3.5cqw, 18px);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.game-shell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #071217;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.game-surface {
+  position: absolute;
+  inset: 0;
+}
+
+.hud-layer,
+.touch-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.hud-top {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  padding: clamp(8px, 2.5cqmin, 14px);
+}
+
+.cash-badge,
+.vitals,
+.heat,
+.ammo-badge {
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid rgba(126, 224, 214, 0.35);
+  border-radius: 9px;
+  background: rgba(5, 18, 24, 0.88);
+  backdrop-filter: blur(4px);
+}
+
+.weapon-wheel-button {
+  position: absolute;
+  inset-inline-end: clamp(8px, 2.5cqmin, 14px);
+  inset-block-end: clamp(202px, 30cqh, 242px);
+  min-width: 68px;
+  min-height: 38px;
+  border: 1px solid #ffbe53;
+  border-radius: 8px;
+  background: rgba(5, 18, 24, 0.9);
+  color: #ffe393;
+  font: 15px "Bebas Neue", sans-serif;
+  pointer-events: auto;
+}
+
+.combo-badge {
+  position: absolute;
+  inset-inline-start: 50%;
+  inset-block-start: clamp(102px, 17cqh, 128px);
+  transform: translateX(-50%) scale(0.8);
+  color: #65e6dd;
+  font-family: "Bebas Neue", Impact, sans-serif;
+  font-size: clamp(22px, 7cqw, 36px);
+  letter-spacing: 0.04em;
+  opacity: 0;
+  transition: opacity 80ms ease, transform 80ms ease;
+}
+
+.combo-badge.is-live {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+.radio-strip {
+  position: absolute;
+  inset-inline-start: 50%;
+  inset-block-end: clamp(154px, 23cqh, 190px);
+  transform: translateX(-50%);
+  max-width: min(62%, 290px);
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 9px;
+  border: 1px solid rgba(255, 190, 83, 0.7);
+  border-radius: 8px;
+  background: rgba(5, 18, 24, 0.9);
+  color: #fff0bd;
+  pointer-events: auto;
+}
+
+.radio-strip span { color: #65e6dd; font-size: 9px; font-weight: 800; }
+.radio-strip b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: clamp(9px, 2.8cqw, 13px); }
+.radio-strip i { font: 24px/1 "Bebas Neue", sans-serif; }
+
+.level-badge {
+  position: absolute;
+  inset-inline-start: clamp(8px, 2.5cqmin, 14px);
+  inset-block-start: clamp(88px, 14cqh, 112px);
+  width: clamp(78px, 22cqw, 112px);
+  display: grid;
+  gap: 3px;
+  color: #ffe393;
+  font: 18px/1 "Bebas Neue", sans-serif;
+}
+
+.level-badge span { height: 5px; overflow: hidden; border-radius: 5px; background: rgba(5, 18, 24, 0.85); }
+.level-badge i { display: block; height: 100%; background: #65e6dd; }
+
+.style-button {
+  position: absolute;
+  inset-inline-end: clamp(8px, 2.5cqmin, 14px);
+  inset-block-start: clamp(88px, 14cqh, 112px);
+  min-width: 58px;
+  min-height: 36px;
+  border: 1px solid rgba(255, 190, 83, 0.7);
+  border-radius: 7px;
+  background: rgba(5, 18, 24, 0.88);
+  color: #ffe393;
+  font: 16px "Bebas Neue", sans-serif;
+  pointer-events: auto;
+}
+
+.quick-buy {
+  position: absolute;
+  z-index: 2;
+  inset-inline-end: 6px;
+  inset-block-start: 28%;
+  display: grid;
+  gap: 7px;
+}
+
+.quick-buy button {
+  width: clamp(50px, 14cqw, 64px);
+  min-height: 48px;
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  border: 1px solid #65e6dd;
+  border-radius: 9px 0 0 9px;
+  background: rgba(5, 25, 31, 0.92);
+  color: #ffe393;
+}
+
+.quick-buy b { font: 16px/1 "Bebas Neue", sans-serif; }
+.quick-buy span { color: #b9fff9; font: 800 9px Inter, sans-serif; }
+.quick-buy button:disabled { opacity: 0.38; }
+
+.cash-badge {
+  display: grid;
+  gap: 0;
+  flex-shrink: 0;
+  color: #ffe393;
+}
+
+.cash-badge strong {
+  font-family: "Bebas Neue", Impact, sans-serif;
+  font-size: clamp(22px, 7cqw, 34px);
+  line-height: 0.9;
+  letter-spacing: 0.03em;
+}
+
+.hud-kicker {
+  color: #82aaa9;
+  font-size: clamp(8px, 2.2cqw, 11px);
+  font-weight: 800;
+}
+
+.vitals {
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  width: clamp(90px, 28cqw, 150px);
+}
+
+.health-track {
+  display: block;
+  height: 7px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #301d2a;
+}
+
+.health-track i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #ff5277, #ffad66);
+  transition: width 120ms linear;
+}
+
+.armor {
+  min-height: 11px;
+  color: #65e6dd;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.weather {
+  color: #9bc9c6;
+  font-size: clamp(8px, 2.1cqw, 10px);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.heat {
+  flex-shrink: 0;
+  gap: 5px;
+}
+
+.heat-pip {
+  width: clamp(10px, 3.3cqw, 16px);
+  aspect-ratio: 1;
+  display: block;
+  border: 1px solid #51646b;
+  transform: rotate(45deg);
+  background: #15262d;
+}
+
+.heat-pip.is-hot {
+  border-color: #ff9f52;
+  background: #ff5277;
+  box-shadow: 0 0 9px rgba(255, 82, 119, 0.7);
+}
+
+.mission-ribbon {
+  position: absolute;
+  inset-block-start: clamp(60px, 11cqh, 78px);
+  inset-inline-start: 50%;
+  max-width: min(82%, 470px);
+  transform: translateX(-50%);
+  padding: 7px 12px;
+  overflow: hidden;
+  border-inline-start: 3px solid #ffbe53;
+  border-inline-end: 3px solid #ffbe53;
+  background: rgba(5, 18, 24, 0.84);
+  color: #fff0bd;
+  font-family: "Bebas Neue", Impact, sans-serif;
+  font-size: clamp(14px, 4.3cqw, 21px);
+  letter-spacing: 0.055em;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.side-ribbon {
+  position: absolute;
+  inset-block-start: clamp(94px, 16cqh, 122px);
+  inset-inline-start: 50%;
+  max-width: min(72%, 380px);
+  transform: translateX(-50%);
+  padding: 5px 9px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: rgba(33, 79, 78, 0.9);
+  color: #b9fff9;
+  font: clamp(11px, 3cqw, 14px) "Bebas Neue", sans-serif;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.recovery-banner {
+  position: absolute;
+  z-index: 3;
+  inset-inline-start: 50%;
+  inset-block-start: 42%;
+  width: max-content;
+  max-width: 82%;
+  transform: translateX(-50%);
+  display: grid;
+  gap: 4px;
+  padding: 12px 18px;
+  border-inline-start: 4px solid #ff5277;
+  border-inline-end: 4px solid #ff5277;
+  background: rgba(5, 18, 24, 0.94);
+  text-align: center;
+}
+
+.recovery-banner strong { color: #ffe393; font: clamp(28px, 9cqw, 46px)/1 "Bebas Neue", sans-serif; }
+.recovery-banner span { color: #b9fff9; font: 800 clamp(10px, 2.8cqw, 13px) Inter, sans-serif; }
+
+.tutorial-banner {
+  position: absolute;
+  z-index: 3;
+  inset-inline-start: 50%;
+  inset-block-start: clamp(142px, 23cqh, 185px);
+  width: max-content;
+  max-width: 82%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 8px 14px;
+  border: 1px solid #65e6dd;
+  border-radius: 8px;
+  background: rgba(5, 18, 24, 0.92);
+  color: #fff0bd;
+  font: clamp(13px, 3.8cqw, 18px) "Bebas Neue", sans-serif;
+  letter-spacing: 0.04em;
+}
+
+.tutorial-banner button { min-width: 44px; min-height: 32px; border: 0; border-radius: 5px; background: #174248; color: #b9fff9; font: 12px Inter, sans-serif; }
+
+.ammo-badge {
+  position: absolute;
+  inset-inline-end: clamp(8px, 2.5cqmin, 14px);
+  inset-block-end: clamp(154px, 23cqh, 190px);
+  min-height: 0;
+  color: #c9dcdb;
+  font-size: clamp(10px, 2.8cqw, 14px);
+  font-weight: 800;
+}
+
+.joystick {
+  position: absolute;
+  inset-inline-start: clamp(18px, 6cqw, 36px);
+  inset-block-end: clamp(22px, 5cqh, 44px);
+  width: clamp(104px, 29cqw, 142px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.joystick-ring,
+.joystick-nub {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  border-radius: 50%;
+}
+
+.joystick-ring {
+  border: 2px solid rgba(112, 224, 214, 0.34);
+  background: rgba(5, 18, 24, 0.44);
+  box-shadow: inset 0 0 30px rgba(39, 142, 140, 0.14);
+}
+
+.joystick-nub {
+  width: 43%;
+  height: 43%;
+  border: 2px solid rgba(255, 227, 147, 0.68);
+  background: rgba(22, 51, 59, 0.92);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.34);
+}
+
+.action-cluster {
+  position: absolute;
+  inset-inline-end: clamp(12px, 3cqw, 28px);
+  inset-block-end: clamp(14px, 3cqh, 28px);
+  width: clamp(190px, 54cqw, 236px);
+  height: clamp(132px, 37cqw, 164px);
+  display: grid;
+  grid-template-columns: minmax(48px, 1fr) minmax(52px, 1.06fr) minmax(64px, 1.24fr);
+  grid-template-rows: minmax(54px, 0.9fr) minmax(64px, 1.1fr);
+  grid-template-areas:
+    "act heavy shoot"
+    "car dash attack";
+  gap: clamp(8px, 2cqw, 12px);
+  pointer-events: auto;
+}
+
+.action-btn {
+  position: static;
+  min-width: 44px;
+  min-height: 44px;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 2px solid rgba(255, 227, 147, 0.58);
+  border-radius: 50%;
+  background: rgba(9, 27, 33, 0.9);
+  color: #fff0bd;
+  font-family: "Bebas Neue", Impact, sans-serif;
+  font-size: clamp(11px, 3.2cqw, 16px);
+  letter-spacing: 0.03em;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+.action-btn.is-down {
+  transform: scale(0.91);
+  border-color: #65e6dd;
+  background: rgba(25, 92, 91, 0.94);
+}
+
+.shoot-btn {
+  grid-area: shoot;
+  border-color: rgba(255, 82, 119, 0.8);
+  color: #ffd7de;
+  font-size: clamp(14px, 3.8cqw, 18px);
+}
+
+.attack-btn {
+  grid-area: attack;
+  border-color: rgba(255, 190, 83, 0.92);
+  background: rgba(78, 37, 52, 0.94);
+  color: #fff0bd;
+  font-size: clamp(15px, 4.2cqw, 20px);
+}
+
+.heavy-btn { grid-area: heavy; border-color: rgba(201, 81, 114, 0.82); color: #ffc1d1; }
+.dash-btn { grid-area: dash; border-color: rgba(101, 230, 221, 0.82); color: #b9fff9; }
+
+.act-btn {
+  grid-area: act;
+}
+
+.car-btn {
+  grid-area: car;
+  border-color: rgba(101, 230, 221, 0.7);
+  color: #b9fff9;
+}
+
+@container (max-width: 380px) {
+  .joystick { width: 92px; inset-inline-start: 8px; inset-block-end: 16px; }
+  .action-cluster {
+    width: 174px;
+    height: 122px;
+    inset-inline-end: 8px;
+    inset-block-end: 12px;
+    grid-template-columns: 46px 48px 64px;
+    grid-template-rows: 54px 60px;
+    gap: 8px;
+  }
+  .action-btn { font-size: 11px; }
+  .attack-btn, .shoot-btn { font-size: 14px; }
+}
+
+.phone-overlay {
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: clamp(12px, 4cqmin, 26px);
+  background: rgba(3, 12, 17, 0.72);
+}
+
+.phone-panel {
+  box-sizing: border-box;
+  width: min(100%, 470px);
+  max-height: 100%;
+  display: grid;
+  gap: clamp(8px, 2cqmin, 12px);
+  overflow: auto;
+  padding: clamp(15px, 4cqmin, 24px);
+  border: 2px solid #65e6dd;
+  border-radius: 14px;
+  background: #0a2027;
+  box-shadow: 9px 9px 0 rgba(155, 54, 86, 0.72);
+}
+
+.phone-topline {
+  display: flex;
+  justify-content: space-between;
+  min-width: 0;
+  color: #75a9a8;
+  font-size: clamp(9px, 2.7cqw, 12px);
+  font-weight: 800;
+}
+
+.phone-topline b { color: #ffe393; }
+
+.phone-panel > strong {
+  overflow: hidden;
+  color: #ffe393;
+  font-family: "Bebas Neue", Impact, sans-serif;
+  font-size: clamp(26px, 8cqw, 40px);
+  letter-spacing: 0.035em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.phone-panel p {
+  margin: 0;
+  padding: 8px 10px;
+  border-inline-start: 3px solid #ff5277;
+  background: rgba(255, 82, 119, 0.1);
+  color: #e2f2ef;
+  font-size: clamp(12px, 3.5cqw, 16px);
+  font-weight: 700;
+}
+
+.phone-choices {
+  display: grid;
+  gap: 9px;
+}
+
+.phone-choices button {
+  min-height: 48px;
+  min-width: 0;
+  padding: 9px 12px;
+  border: 1px solid rgba(101, 230, 221, 0.44);
+  border-radius: 8px;
+  background: #132f37;
+  color: #f1fbf8;
+  font: 700 clamp(11px, 3.1cqw, 15px) Inter, sans-serif;
+  text-align: start;
+}
+
+.phone-choices button:active {
+  border-color: #ffbe53;
+  background: #28424a;
+}
+
+.phone-panel small {
+  color: #ffbe53;
+  font-size: clamp(9px, 2.6cqw, 12px);
+  font-weight: 800;
+  text-align: center;
+}
+
+.shop-overlay {
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: clamp(10px, 3cqmin, 22px);
+  background: rgba(3, 12, 17, 0.74);
+}
+
+.shop-panel {
+  box-sizing: border-box;
+  width: min(100%, 500px);
+  max-height: 100%;
+  display: grid;
+  gap: 10px;
+  overflow: auto;
+  padding: clamp(14px, 3.6cqmin, 22px);
+  border: 2px solid #ffbe53;
+  border-radius: 14px;
+  background: #0a2027;
+  box-shadow: 9px 9px 0 rgba(25, 109, 105, 0.65);
+}
+
+.shop-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  color: #ffe393;
+  font-family: "Bebas Neue", Impact, sans-serif;
+  font-size: clamp(25px, 8cqw, 40px);
+  letter-spacing: 0.04em;
+}
+
+.shop-heading b { color: #65e6dd; font-size: 0.72em; }
+
+.upgrade-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.upgrade-grid button {
+  min-width: 0;
+  min-height: 76px;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  padding: 9px;
+  border: 1px solid rgba(101, 230, 221, 0.45);
+  border-radius: 9px;
+  background: #132f37;
+  color: #f1fbf8;
+  text-align: start;
+}
+
+.upgrade-grid strong { color: #ffe393; font-family: "Bebas Neue", sans-serif; font-size: clamp(17px, 4.6cqw, 23px); letter-spacing: 0.04em; }
+.upgrade-grid span { overflow: hidden; color: #b9d3d0; font-size: clamp(9px, 2.4cqw, 12px); white-space: nowrap; text-overflow: ellipsis; }
+.upgrade-grid i { color: #65e6dd; font: 800 clamp(9px, 2.5cqw, 12px) Inter, sans-serif; }
+.upgrade-grid button:disabled { opacity: 0.48; }
+.shop-panel small { color: #ffbe53; font-size: clamp(9px, 2.5cqw, 12px); font-weight: 800; text-align: center; }
+
+.shop-close {
+  min-height: 48px;
+  border: 2px solid #65e6dd;
+  border-radius: 8px;
+  background: #174248;
+  color: #eafffb;
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 20px;
+  letter-spacing: 0.04em;
+}
+
+.profile-overlay {
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: clamp(12px, 4cqmin, 24px);
+  background: rgba(3, 12, 17, 0.78);
+}
+
+.profile-panel {
+  box-sizing: border-box;
+  width: min(100%, 500px);
+  max-height: 100%;
+  display: grid;
+  gap: 12px;
+  overflow: auto;
+  padding: clamp(16px, 4cqmin, 24px);
+  border: 2px solid #ffbe53;
+  border-radius: 14px;
+  background: #0a2027;
+}
+
+.profile-heading { color: #ffe393; font: clamp(28px, 9cqw, 44px)/1 "Bebas Neue", sans-serif; text-align: center; }
+.look-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.look-grid button { min-width: 0; min-height: 48px; border: 1px solid #527b7b; border-radius: 8px; background: #132f37; color: #d7e9e7; font: 16px "Bebas Neue", sans-serif; }
+.look-grid button.is-selected { border-color: #ffbe53; background: #513044; color: #fff0bd; }
+.profile-panel label { display: grid; gap: 5px; color: #65e6dd; font: 14px "Bebas Neue", sans-serif; }
+.profile-panel input { box-sizing: border-box; width: 100%; min-height: 46px; padding: 8px 10px; border: 1px solid #65e6dd; border-radius: 7px; background: #07151b; color: #fff; font: 700 16px Inter, sans-serif; user-select: text; -webkit-user-select: text; }
+.profile-save { min-height: 50px; border: 2px solid #ffbe53; border-radius: 8px; background: #9b3656; color: #fff6d8; font: 20px "Bebas Neue", sans-serif; }
+
+.property-overlay {
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: clamp(12px, 4cqmin, 24px);
+  background: rgba(3, 12, 17, 0.76);
+}
+
+.property-panel {
+  box-sizing: border-box;
+  width: min(100%, 440px);
+  display: grid;
+  gap: 10px;
+  padding: clamp(16px, 4cqmin, 24px);
+  border: 2px solid #65e6dd;
+  border-radius: 14px;
+  background: #0a2027;
+  text-align: center;
+}
+
+.property-panel > span { color: #65e6dd; font: 15px "Bebas Neue", sans-serif; letter-spacing: 0.06em; }
+.property-panel strong { color: #ffe393; font: clamp(30px, 9cqw, 44px)/1 "Bebas Neue", sans-serif; }
+.property-panel p { margin: 0; color: #d3e6e4; font: 700 clamp(11px, 3cqw, 15px) Inter, sans-serif; }
+.property-panel b { color: #ffbe53; font: 22px "Bebas Neue", sans-serif; }
+.property-panel small { color: #9dc6c3; font: 800 10px Inter, sans-serif; }
+.property-panel button { min-height: 48px; border: 1px solid #ffbe53; border-radius: 8px; background: #513044; color: #fff0bd; font: 19px "Bebas Neue", sans-serif; }
+.property-panel [data-property-close] { border-color: #527b7b; background: #132f37; }
+
+.home-overlay {
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: clamp(10px, 3cqmin, 20px);
+  background: rgba(3, 12, 17, 0.72);
+}
+
+.home-panel {
+  box-sizing: border-box;
+  width: min(100%, 510px);
+  max-height: 100%;
+  display: grid;
+  gap: clamp(8px, 2cqmin, 12px);
+  overflow: auto;
+  padding: clamp(14px, 3.6cqmin, 24px);
+  border: 2px solid #ffbe53;
+  border-radius: 14px;
+  background: rgba(8, 31, 38, 0.97);
+}
+
+.home-title { color: #ffe393; font: clamp(38px, 13cqw, 66px)/0.9 "Bebas Neue", sans-serif; letter-spacing: 0.04em; text-align: center; }
+.home-panel > small { color: #65e6dd; font: 800 clamp(9px, 2.6cqw, 12px) Inter, sans-serif; text-align: center; }
+.home-look-grid, .home-mobmon-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+.home-look-grid button, .home-mobmon-grid button { min-width: 0; min-height: 46px; border: 1px solid #527b7b; border-radius: 7px; background: #132f37; color: #d7e9e7; font: clamp(12px, 3.5cqw, 17px) "Bebas Neue", sans-serif; }
+.home-look-grid button.is-selected, .home-mobmon-grid button.is-selected { border-color: #ffbe53; background: #513044; color: #fff0bd; }
+.home-panel label { display: grid; gap: 4px; color: #65e6dd; font: 13px "Bebas Neue", sans-serif; }
+.home-panel input { box-sizing: border-box; width: 100%; min-height: 44px; padding: 8px 10px; border: 1px solid #65e6dd; border-radius: 7px; background: #07151b; color: #fff; font: 700 16px Inter, sans-serif; user-select: text; -webkit-user-select: text; }
+.home-play { min-height: 52px; border: 2px solid #ffbe53; border-radius: 8px; background: #9b3656; color: #fff6d8; font: 22px "Bebas Neue", sans-serif; letter-spacing: 0.04em; }
+.home-play:disabled { opacity: 0.4; }
+
+.weapon-wheel {
+  position: absolute;
+  z-index: 5;
+  inset-inline-end: clamp(16px, 6cqw, 38px);
+  inset-block-end: clamp(150px, 24cqh, 210px);
+  width: clamp(210px, 58cqw, 270px);
+  aspect-ratio: 1;
+  border: 2px solid rgba(101, 230, 221, 0.55);
+  border-radius: 50%;
+  background: rgba(3, 15, 20, 0.9);
+}
+
+.weapon-wheel button { position: absolute; width: 78px; min-height: 54px; border: 1px solid #ffbe53; border-radius: 11px; background: #17333a; color: #fff0bd; font: 15px "Bebas Neue", sans-serif; }
+.weapon-wheel button i { display: block; color: #65e6dd; font: 800 9px Inter, sans-serif; }
+.weapon-wheel button:disabled { opacity: 0.32; }
+.weapon-wheel button.is-selected { background: #71364f; }
+.weapon-wheel [data-weapon="pistol"] { inset-block-start: 8px; inset-inline-start: 50%; transform: translateX(-50%); }
+.weapon-wheel [data-weapon="shotgun"] { inset-inline-end: 8px; inset-block-start: 50%; transform: translateY(-50%); }
+.weapon-wheel [data-weapon="carbine"] { inset-block-end: 8px; inset-inline-start: 50%; transform: translateX(-50%); }
+.weapon-wheel [data-weapon="revolver"] { inset-inline-start: 8px; inset-block-start: 50%; transform: translateY(-50%); }
+.weapon-wheel .wheel-close { inset: 50% auto auto 50%; width: 54px; min-height: 54px; transform: translate(-50%, -50%); border-radius: 50%; border-color: #65e6dd; font-size: 28px; }
+
+.start-overlay {
+  z-index: 3;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-content: center;
+  gap: 6px;
+  border: 0;
+  background: rgba(5, 16, 22, 0.28);
+  color: #fff0bd;
+  text-align: center;
+}
+
+.start-title {
+  font-family: "Bebas Neue", Impact, sans-serif;
+  font-size: clamp(46px, 16cqw, 82px);
+  line-height: 0.88;
+  letter-spacing: 0.045em;
+  color: #ffe393;
+  text-shadow: 4px 4px #9b3656;
+}
+
+.start-status {
+  justify-self: center;
+  padding: 8px 14px;
+  border-radius: 6px;
+  background: rgba(5, 18, 24, 0.86);
+  color: #b9e5e1;
+  font-size: clamp(11px, 3.2cqw, 15px);
+  font-weight: 800;
+}
+
+.start-overlay.has-error .start-status {
+  color: #ff9cae;
+}
+
+.end-overlay {
+  z-index: 5;
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(3, 12, 17, 0.58);
+}
+
+.end-copy {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  padding: 22px;
+  text-align: center;
+}
+
+.end-copy strong {
+  color: #ffe393;
+  font-family: "Bebas Neue", Impact, sans-serif;
+  font-size: clamp(32px, 10cqw, 52px);
+  letter-spacing: 0.04em;
+}
+
+.end-copy span {
+  padding: 6px 10px;
+  background: rgba(5, 18, 24, 0.86);
+  color: #c9dcdb;
+  font-size: clamp(12px, 3.5cqw, 17px);
+  font-weight: 700;
+}
+
+.end-copy button {
+  min-width: 152px;
+  min-height: 50px;
+  margin-block-start: 10px;
+  border: 2px solid #ffbe53;
+  border-radius: 8px;
+  background: #9b3656;
+  color: #fff6d8;
+  font-family: "Bebas Neue", Impact, sans-serif;
+  font-size: 21px;
+  letter-spacing: 0.05em;
+}
+
+@media (max-height: 520px) {
+  .mission-ribbon { inset-block-start: 54px; }
+  .joystick { width: 94px; inset-block-end: 12px; }
+  .action-cluster { width: 184px; height: 102px; inset-block-end: 8px; grid-template-columns: 48px 50px 64px; grid-template-rows: repeat(2, 46px); gap: 7px; }
+  .ammo-badge { inset-block-end: 118px; }
+  .phone-panel { grid-template-columns: 0.8fr 1.2fr; align-items: center; }
+  .phone-topline, .phone-panel > strong, .phone-panel small { grid-column: 1 / -1; }
+  .phone-choices { grid-column: 2; grid-row: 2 / 4; }
+  .shop-panel { width: min(96%, 620px); }
+  .upgrade-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .upgrade-grid button { min-height: 62px; }
+}
