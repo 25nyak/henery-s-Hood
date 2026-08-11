@@ -1,0 +1,22 @@
+{
+  "ASPHALT_TEXTURE": "/generated-assets/asphalt_texture.webp",
+  "PICKUP_ATLAS": "/generated-assets/pickup_atlas-transparent.webp",
+  "CHARACTER_SHEET": "/generated-assets/character_sheet-transparent.webp",
+  "VEHICLE_ATLAS": "/generated-assets/vehicle_atlas-transparent.webp",
+  "CITY_CAST_SHEET": "/generated-assets/city_cast_sheet-transparent.webp",
+  "COMBAT_EFFECT_SHEET": "/generated-assets/combat_effect_sheet-transparent.webp",
+  "INTERIOR_FLOOR_TEXTURE": "/generated-assets/interior_floor_texture.webp",
+  "INTERIOR_PROP_ATLAS": "/generated-assets/interior_prop_atlas-transparent.webp",
+  "CARGO_VEHICLE_ATLAS": "/generated-assets/cargo_vehicle_atlas-transparent.webp",
+  "RACKET_CREW_SHEET": "/generated-assets/racket_crew_sheet-transparent.webp",
+  "WEAPON_ATLAS": "/generated-assets/weapon_atlas-transparent.webp",
+  "HEIST_LOOT_ATLAS": "/generated-assets/heist_loot_atlas-transparent.webp",
+  "AIRPORT_VEHICLE_ATLAS": "/generated-assets/airport_vehicle_atlas-transparent.webp",
+  "STOREFRONT_BUILDING_ATLAS": "/generated-assets/storefront_building_atlas-transparent.webp",
+  "CIVIC_BUILDING_ATLAS": "/generated-assets/civic_building_atlas-transparent.webp",
+  "PLAYER_ROSTER_SHEET": "/generated-assets/player_roster_sheet-transparent.webp",
+  "MOBMON_SHEET": "/generated-assets/mobmon_sheet-transparent.webp",
+  "POLICE_RANK_SHEET": "/generated-assets/police_rank_sheet-transparent.webp",
+  "RIVER_AIR_VEHICLE_ATLAS": "/generated-assets/river_air_vehicle_atlas-transparent.webp",
+  "MISSION_BUSINESS_ATLAS": "/generated-assets/mission_business_atlas-transparent.webp"
+}
